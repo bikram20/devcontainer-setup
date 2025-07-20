@@ -19,7 +19,8 @@ RUN apt update && apt install -y less \
   iproute2 \
   dnsutils \
   aggregate \
-  jq
+  jq \
+  openssl
 
 # Ensure default node user has access to /usr/local/share
 RUN mkdir -p /usr/local/share/npm-global && \
@@ -50,6 +51,13 @@ RUN ARCH=$(dpkg --print-architecture) && \
 # Install code-server (as root before switching users)
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 
+# Install VS Code CLI for tunneling
+RUN curl -Lk 'https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64' --output vscode_cli.tar.gz && \
+    tar -xf vscode_cli.tar.gz && \
+    mv code /usr/local/bin/ && \
+    rm vscode_cli.tar.gz && \
+    chown node:node /usr/local/bin/code
+
 # Set up non-root user
 USER node
 
@@ -75,18 +83,45 @@ RUN npm install -g @anthropic-ai/claude-code
 # Create code-server config directory
 RUN mkdir -p /home/node/.config/code-server
 
-# Create code-server configuration
-RUN echo 'bind-addr: 0.0.0.0:8080\n\
-auth: none\n\
+# Create startup script with token generation
+RUN echo '#!/bin/bash\n\
+# Generate random token if not provided\n\
+if [ -z "$AUTH_TOKEN" ]; then\n\
+    AUTH_TOKEN=$(openssl rand -hex 24)\n\
+fi\n\
+\n\
+# Create code-server config with authentication\n\
+cat > /home/node/.config/code-server/config.yaml << EOF\n\
+bind-addr: 0.0.0.0:8080\n\
+auth: password\n\
+password: ${AUTH_TOKEN}\n\
 cert: false\n\
-' > /home/node/.config/code-server/config.yaml
+EOF\n\
+\n\
+# Display access information\n\
+echo "========================================"\n\
+echo "🔐 CODE-SERVER ACCESS INFORMATION:"\n\
+echo "========================================"\n\
+if [ "$USE_TUNNEL" = "true" ]; then\n\
+    echo "Starting VS Code tunnel..."\n\
+    echo "Tunnel name: ${TUNNEL_NAME:-digitalocean-dev}"\n\
+    code tunnel --accept-server-license-terms --name "${TUNNEL_NAME:-digitalocean-dev}"\n\
+else\n\
+    echo "URL: https://${APP_URL:-your-app.ondigitalocean.app}"\n\
+    echo "Password: ${AUTH_TOKEN}"\n\
+    echo ""\n\
+    echo "Or use this direct link:"\n\
+    echo "https://${APP_URL:-your-app.ondigitalocean.app}?password=${AUTH_TOKEN}"\n\
+    echo "========================================"\n\
+    exec code-server /workspace\n\
+fi\n\
+' > /home/node/start.sh && chmod +x /home/node/start.sh
 
 # Ensure proper ownership
 RUN chown -R node:node /home/node/.config
 
-# Expose port 8080
+# Expose port 8080 for code-server
 EXPOSE 8080
 
-# Start code-server
-CMD ["code-server", "/workspace"]
-
+# Start services
+CMD ["/home/node/start.sh"]
