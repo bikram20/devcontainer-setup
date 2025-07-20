@@ -47,6 +47,9 @@ RUN ARCH=$(dpkg --print-architecture) && \
   sudo dpkg -i "git-delta_0.18.2_${ARCH}.deb" && \
   rm "git-delta_0.18.2_${ARCH}.deb"
 
+# Install code-server (as root before switching users)
+RUN curl -fsSL https://code-server.dev/install.sh | sh
+
 # Set up non-root user
 USER node
 
@@ -68,9 +71,6 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
 
 # Install Claude
 RUN npm install -g @anthropic-ai/claude-code
-
-# Install code-server
-RUN curl -fsSL https://code-server.dev/install.sh | sh
 
 # Create code-server config directory
 RUN mkdir -p /home/node/.config/code-server
