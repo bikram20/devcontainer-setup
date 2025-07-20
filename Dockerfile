@@ -20,7 +20,8 @@ RUN apt update && apt install -y less \
   dnsutils \
   aggregate \
   jq \
-  openssl
+  openssl \
+  netcat-openbsd
 
 # Ensure default node user has access to /usr/local/share
 RUN mkdir -p /usr/local/share/npm-global && \
@@ -83,6 +84,13 @@ RUN npm install -g @anthropic-ai/claude-code
 # Create code-server config directory
 RUN mkdir -p /home/node/.config/code-server
 
+# Create a simple health check server script
+RUN echo '#!/bin/bash\n\
+while true; do\n\
+  echo -e "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK" | nc -l -p 8080 -q 1\n\
+done\n\
+' > /home/node/health-server.sh && chmod +x /home/node/health-server.sh
+
 # Create startup script with token generation
 RUN echo '#!/bin/bash\n\
 # Generate random token if not provided\n\
@@ -105,6 +113,9 @@ echo "========================================"\n\
 if [ "$USE_TUNNEL" = "true" ]; then\n\
     echo "Starting VS Code tunnel..."\n\
     echo "Tunnel name: ${TUNNEL_NAME:-digitalocean-dev}"\n\
+    # Start health check server in background for DigitalOcean\n\
+    /home/node/health-server.sh &\n\
+    # Start the tunnel\n\
     code tunnel --accept-server-license-terms --name "${TUNNEL_NAME:-digitalocean-dev}"\n\
 else\n\
     echo "URL: https://${APP_URL:-your-app.ondigitalocean.app}"\n\
@@ -120,7 +131,7 @@ fi\n\
 # Ensure proper ownership
 RUN chown -R node:node /home/node/.config
 
-# Expose port 8080 for code-server
+# Expose port 8080 for code-server OR health checks
 EXPOSE 8080
 
 # Start services
