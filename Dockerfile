@@ -69,3 +69,24 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
 # Install Claude
 RUN npm install -g @anthropic-ai/claude-code
 
+# Install code-server
+RUN curl -fsSL https://code-server.dev/install.sh | sh
+
+# Create code-server config directory
+RUN mkdir -p /home/node/.config/code-server
+
+# Create code-server configuration
+RUN echo 'bind-addr: 0.0.0.0:8080\n\
+auth: none\n\
+cert: false\n\
+' > /home/node/.config/code-server/config.yaml
+
+# Ensure proper ownership
+RUN chown -R node:node /home/node/.config
+
+# Expose port 8080
+EXPOSE 8080
+
+# Start code-server
+CMD ["code-server", "/workspace"]
+
