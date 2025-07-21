@@ -85,18 +85,24 @@ while true; do\n\
 done\n\
 ' > /home/node/health-server.sh && chmod +x /home/node/health-server.sh
 
-# Create simplified startup script
+# Create simplified startup script with cleanup
 RUN echo '#!/bin/bash\n\
 echo "========================================"\n\
 echo "🚀 Starting VS Code Tunnel Dev Container"\n\
 echo "========================================"\n\
 echo "Tunnel name: ${TUNNEL_NAME:-digitalocean-dev}"\n\
+\n\
+# Clean up any existing tunnel registration\n\
+echo "Cleaning up any existing tunnel..."\n\
+code tunnel unregister --name "${TUNNEL_NAME:-digitalocean-dev}" 2>/dev/null || true\n\
+\n\
 echo "Starting health check server on port 8080..."\n\
 # Start health check server in background for DigitalOcean\n\
 /home/node/health-server.sh &\n\
+\n\
 echo "Starting VS Code tunnel..."\n\
-# Start the tunnel\n\
-code tunnel --accept-server-license-terms --name "${TUNNEL_NAME:-digitalocean-dev}"\n\
+# Start the tunnel with verbose output\n\
+code tunnel --accept-server-license-terms --name "${TUNNEL_NAME:-digitalocean-dev}" --verbose\n\
 ' > /home/node/start.sh && chmod +x /home/node/start.sh
 
 # Expose port 8080 for health checks
