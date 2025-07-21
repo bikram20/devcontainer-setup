@@ -86,15 +86,12 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
 # Install Claude
 RUN npm install -g @anthropic-ai/claude-code
 
-# Create a more robust health check server script
-RUN echo '#!/bin/bash\n\
-PORT=${HEALTH_CHECK_PORT:-8080}\n\
-echo "Starting health check server on port $PORT..."\n\
-while true; do\n\
-  response="HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 20\r\n\r\nHealthy - $(date +%s)"\n\
-  echo -e "$response" | nc -l -p $PORT -q 1 2>/dev/null || sleep 1\n\
-done\n\
-' > /home/node/health-server.sh && chmod +x /home/node/health-server.sh
+# Copy application files
+COPY --chown=node:node src/ /workspace/src/
+
+# Install application dependencies
+WORKDIR /workspace/src
+RUN npm install
 
 # Create tunnel cleanup script
 RUN echo '#!/bin/bash\n\
@@ -126,22 +123,23 @@ echo "========================================"\n\
 echo "🚀 Starting VS Code Tunnel Dev Container"\n\
 echo "========================================"\n\
 echo "Tunnel name: $TUNNEL_NAME"\n\
-echo "Health check port: ${HEALTH_CHECK_PORT:-8080}"\n\
+echo "App port: ${PORT:-8080}"\n\
 echo "========================================"\n\
 \n\
 # Cleanup any existing tunnel\n\
 /home/node/cleanup-tunnel.sh\n\
 \n\
-# Start health check server in background\n\
-echo "Starting health check server..."\n\
-/home/node/health-server.sh &\n\
-HEALTH_PID=$!\n\
+# Start the Express app in background\n\
+echo "Starting Express application..."\n\
+cd /workspace/src\n\
+npm start &\n\
+APP_PID=$!\n\
 \n\
 # Trap to ensure cleanup on exit\n\
-trap "kill $HEALTH_PID 2>/dev/null || true; /home/node/cleanup-tunnel.sh" EXIT INT TERM\n\
+trap "kill $APP_PID 2>/dev/null || true; /home/node/cleanup-tunnel.sh" EXIT INT TERM\n\
 \n\
-# Give health check server time to start\n\
-sleep 2\n\
+# Give app time to start\n\
+sleep 3\n\
 \n\
 # Start VS Code tunnel with retry logic\n\
 MAX_RETRIES=3\n\
@@ -170,16 +168,11 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do\n\
 done\n\
 ' > /home/node/start.sh && chmod +x /home/node/start.sh
 
-# Default environment variables
-ENV TUNNEL_NAME=digitalocean-dev
-ENV HEALTH_CHECK_PORT=8080
+# Set environment variables
+ENV PORT=8080
 
-# Expose port 8080 for health checks
+# Expose port 8080 for the application
 EXPOSE 8080
-
-# Health check for DigitalOcean App Platform
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD nc -z localhost ${HEALTH_CHECK_PORT:-8080} || exit 1
 
 # Start services
 CMD ["/home/node/start.sh"]
