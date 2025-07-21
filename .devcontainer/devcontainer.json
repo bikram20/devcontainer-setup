@@ -1,0 +1,49 @@
+{
+  "name": "DigitalOcean Node.js Dev Container",
+  "dockerFile": "../Dockerfile",
+  
+  // Use 'forwardPorts' to make a list of ports inside the container available locally
+  "forwardPorts": [3000],
+  
+  // Use 'postCreateCommand' to run commands after the container is created
+  "postCreateCommand": "npm install",
+  
+  // Configure tool-specific properties
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-typescript-next",
+        "GitHub.copilot",
+        "ms-vscode.remote-tunnels"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      }
+    }
+  },
+  
+  // Uncomment to connect as root instead
+  // "remoteUser": "root",
+  "remoteUser": "node",
+  
+  // Environment variables
+  "remoteEnv": {
+    "DEVCONTAINER": "true",
+    "NODE_ENV": "development"
+  },
+  
+  // Mounts
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+  ],
+  
+  // Features to add to the dev container
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  }
+}

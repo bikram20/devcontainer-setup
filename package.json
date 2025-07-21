@@ -1,0 +1,20 @@
+{
+    "name": "devcontainer-express-app",
+    "version": "1.0.0",
+    "description": "Express.js app running in DigitalOcean Dev Container",
+    "main": "app.js",
+    "scripts": {
+      "start": "node app.js",
+      "dev": "node --watch app.js",
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": ["express", "devcontainer", "digitalocean"],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+      "express": "^4.18.2"
+    },
+    "devDependencies": {
+      "nodemon": "^3.0.1"
+    }
+  }
