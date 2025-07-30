@@ -87,7 +87,7 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
 RUN npm install -g @anthropic-ai/claude-code
 
 # Copy application files
-COPY --chown=node:node src/ /workspace/src/
+COPY --chown=node:node srcs/ /workspace/src/
 
 # Install application dependencies
 WORKDIR /workspace/src
